@@ -7,37 +7,38 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Main {
-
+    final static String LETTERS = "RLRFR";
+    final static int ROUTE_LENGTH = 100;
+    final static int AMOUNT_OF_THREADS = 1000;
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
-    public static int threadCount = 1000;
-
     public static void main(String[] args) {
 
-        final ExecutorService threadPool = Executors.newFixedThreadPool(threadCount);
+        for(int i = 0; i < AMOUNT_OF_THREADS; i++){
+            new Thread(() ->{
+                String route = generateRoute(LETTERS, ROUTE_LENGTH);
+                int frequency = (int) route.chars().filter(ch -> ch == 'R').count();
 
-        for (int i = 0; i < threadCount; i++) {
-            Callable<Map<Integer, Integer>> mapCallable = new CallableTask(sizeToFreq);
-            threadPool.submit(mapCallable);
-        }
-        threadPool.shutdown();
-
-        int value = 0;
-        int key = 0;
-        Set<Integer> keyMap = sizeToFreq.keySet();
-        for (Integer integer : keyMap) {
-            if (sizeToFreq.get(integer) > value) {
-                value = sizeToFreq.get(integer);
-                key = integer;
-            }
+                synchronized (sizeToFreq){
+                    if(sizeToFreq.containsKey(frequency)){
+                        sizeToFreq.put(frequency, sizeToFreq.get(frequency) + 1);
+                    } else {
+                        sizeToFreq.put(frequency, 1);
+                    }
+                }
+            }).start();
         }
 
-        sizeToFreq.remove(key, value);
+        Map.Entry<Integer, Integer> max =   sizeToFreq
+                .entrySet()
+                .stream()
+                .max(Map.Entry.comparingByValue())
+                .get();
+        System.out.println("Самое частое количество повторений " + max.getKey() + "(встретилось " + max.getValue() + "раз)");
 
-        System.out.println("Самое частое количество повторений " + key + " (встретилось " + value + " раз)");
-        System.out.println("Другие размеры:");
-        for (Integer integer : sizeToFreq.keySet()) {
-            System.out.println("- " + integer + " (" + sizeToFreq.get(integer) + " раз)");
-        }
+        System.out.println("Другие размеры: ");
+        sizeToFreq.entrySet().stream().sorted(Map.Entry.comparingByValue())
+                .forEach(e -> System.out.println(" - " + e.getKey() + " (" + e.getValue() + " раз)"));
+
     }
 
     public static String generateRoute(String letters, int length) {
